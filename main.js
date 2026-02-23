@@ -1,12 +1,31 @@
 console.log("bullshit")
 
-const timePerDay = 1000 * 60
+const timePerDay = 1000 * 10
 const apps = [
-    "www.instagram.com",
-    "discord.com",
-    "www.tiktok.com",
-    "x.com"
+    {
+        "name": "instagram",
+        "url": "*://www.instagram.com/*",
+        "multiplier": 1
+    },
+    {
+        "name": "x",
+        "url": "*://x.com/*",
+        "multiplier": 1
+    },
+    {
+        "name": "netflix",
+        "url": "*://www.netflix.com/*",
+        "multiplier": 1
+    },
+    {
+        "name": "tiktok",
+        "url": "*://www.tiktok.com/*",
+        "multiplier": 1
+    },
 ]
+const appsRegex = []
+const appsUrls = []
+
 const alarms = [
     1000 * 50,
     1000 * 40,
@@ -19,33 +38,52 @@ var remaningTime = timePerDay
 var currentTimeOutId = null
 var blocked = false
 
-const globalRegex = "^[a-z]+\:\/\/{}\/"
-const appsRegex = []
-for (let i = 0; i <= apps.length - 1; i ++) {
-    const app = apps[i]
-    const appRegex = app.replaceAll(/\./g, "\\.")
-    appsRegex.push(new RegExp(globalRegex.replace(/{}/, appRegex)))
+const translateChars = {
+    "*": ".+",
+    ".": "\\."
+}
+for (const app of apps) {
+    const urlMatch = app.url
+    const regex = ["^"]
+
+    for (const char of urlMatch) {
+        const translated = translateChars[char]
+        regex.push(translated ? translated : char)
+    }
+    regex[regex.length - 1] = "*"
+    appsUrls.push(urlMatch)
+    appsRegex.push(new RegExp(regex.join("")))
 }
 
-function trackedUrl(url) {
-    if (!url) {
-        return false
-    }
+function showNotification(title, message) {
+    browser.notifications.create({
+        type: "basic",
+        iconUrl: "icons/icon.png",
+        title: title,
+        message: message
+    })
+}
+
+function getAppByUrl(url) {
     for (let i = 0; i <= appsRegex.length - 1; i ++) {
         let regex = appsRegex[i]
         if (regex.test(url)) {
-            return true
+            return apps[i]
         }
     }
     return false
 }
 
-function killBoderedTabs() {
-    console.log("mate todos todos o brasil morreu")
+async function killBoderedTabs() {
+    const tabs = await browser.tabs.query({url: appsUrls})
+    for (const tab of tabs) {
+        browser.tabs.remove(tab.id)
+    }
 }
 
 var lastTime = null 
 function runMainTimeOut() {
+    if (currentTimeOutId) { return }
     let nextAlarm = remaningTime
     let alarmValue = 0
     let noAlarm = true
@@ -69,41 +107,41 @@ function runMainTimeOut() {
         } else {
             runMainTimeOut()
         }
-
-        console.log("chegou o alarme das {}, no rt {}".replace(/{}/, alarmValue).replace(/{}/, remaningTime))
     }, nextAlarm)
 }
 
+var lastapp = null
 function onTabChanged(tab) {
-    const isTracked = trackedUrl(tab.url)
+    const app = getAppByUrl(tab.url)
+
     if (blocked) {
-        browser.tabs.remove(tab.tabId)
+        if (app) {
+            browser.tabs.remove(tab.id)
+        }
         return
     }
-
-    if (isTracked & currentTimeOutId !== null) {
-        console.log(remaningTime)
+    if (app && currentTimeOutId) {
+        console.log("bodered para bodered")
         return
     }
-
-    if (!isTracked & currentTimeOutId !== null) {
+    if (!app && currentTimeOutId) {
+        console.log("bodered para unbodered")
         clearTimeout(currentTimeOutId)
         currentTimeOutId = null
-        remaningTime -= Date.now() - lastTime
-        console.log(remaningTime)
+        console.log(lastapp)
+        remaningTime -= (Date.now() - lastTime) * lastapp.multiplier
         return 
     }
-
-    if (!isTracked) {
-        console.log(remaningTime)
+    if (!app) {
+        console.log("unbodered para unbodered")
         return
     }
-    console.log(remaningTime)
 
+    console.log("unbodered para bodered")
     lastTime = Date.now()
     currentTimeOutId = 0
-    console.log("hASHASDH")
     runMainTimeOut()
+    lastapp = app
  }
 
 async function onActivated(activeInfo) {
@@ -112,8 +150,33 @@ async function onActivated(activeInfo) {
 }
 
 async function onUpdated(tabId, changeInfo, tab) {
-    
+    if (changeInfo.status != "complete") { return }
+
+    if (tab.active) {
+        onTabChanged(tab)
+        return
+    }
+
+    const app = getAppByUrl(tab.url)
+    if (blocked && app) {
+        browser.tabs.remove(tabId)
+    }
 }
+
+function AddTime() {
+
+}
+
+setInterval(() => {
+    if (!lastTime) { return }
+    if (currentTimeOutId) {
+        console.log(remaningTime - (Date.now() - lastTime))
+    } else {
+        console.log(remaningTime)
+    }
+    
+}, 100);
 
 browser.tabs.onUpdated.addListener(onUpdated)
 browser.tabs.onActivated.addListener(onActivated)
+browser.browserAction.onClicked.addListener(AddTime)
