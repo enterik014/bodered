@@ -1,42 +1,57 @@
 console.log("bullshit")
 
-const timePerDay = 1000 * 10
+const timeReachedMessage = "Time reached, killing all bodered tabs, do some tasks to get more time"
+const alarmReachedMessage = "You have {{}} minutes left on bodered tabs."
+const taskCompletedMessage = "You finished a task, so now you have one extra hour"
+
+const timePerClick = 1000 * 60 * 60
 const apps = [
     {
         "name": "instagram",
-        "url": "*://www.instagram.com/*",
-        "multiplier": 1
+        "url": "*://www.instagram.com/*"
     },
     {
         "name": "x",
-        "url": "*://x.com/*",
-        "multiplier": 1
+        "url": "*://x.com/*"
     },
     {
         "name": "netflix",
-        "url": "*://www.netflix.com/*",
-        "multiplier": 1
+        "url": "*://www.netflix.com/*"
     },
     {
         "name": "tiktok",
-        "url": "*://www.tiktok.com/*",
-        "multiplier": 1
+        "url": "*://www.tiktok.com/*"
     },
+    {
+        "name": "anime",
+        "url": "*://animesonlineclub.net/*"
+    },
+    {
+        "name": "anime",
+        "url": "*://animesonlineclub.net/*"
+    },
+    {
+        "name": "spotify",
+        "url": "*://open.spotify.com/*"
+    }
 ]
 const appsRegex = []
 const appsUrls = []
 
-const alarms = [
-    1000 * 50,
-    1000 * 40,
-    1000 * 30,
-    1000 * 20,
-    1000 * 10
-]
+//const alarms = [
+//    1000 * 60 * 60,
+//    1000 * 60 * 30,
+//    1000 * 60 * 10,
+//    1000 * 60,
+//]
+const alarms = []
+for (let i = 60; i > 1; i--) {
+    alarms.push(1000 * 60 * i)
+}
 
-var remaningTime = timePerDay
+var remaningTime = 0
 var currentTimeOutId = null
-var blocked = false
+var blocked = true
 
 const translateChars = {
     "*": ".+",
@@ -55,11 +70,11 @@ for (const app of apps) {
     appsRegex.push(new RegExp(regex.join("")))
 }
 
-function showNotification(title, message) {
+function showNotification(message) {
     browser.notifications.create({
         type: "basic",
         iconUrl: "icons/icon.png",
-        title: title,
+        title: "Bodered",
         message: message
     })
 }
@@ -75,6 +90,8 @@ function getAppByUrl(url) {
 }
 
 async function killBoderedTabs() {
+    currentTimeOutId = null
+    showNotification(timeReachedMessage)
     const tabs = await browser.tabs.query({url: appsUrls})
     for (const tab of tabs) {
         browser.tabs.remove(tab.id)
@@ -83,13 +100,16 @@ async function killBoderedTabs() {
 
 var lastTime = null 
 function runMainTimeOut() {
-    if (currentTimeOutId) { return }
+    if (currentTimeOutId) {
+        clearTimeout(currentTimeOutId)
+    }
+
     let nextAlarm = remaningTime
     let alarmValue = 0
     let noAlarm = true
     for (let i = 0; i <= alarms.length - 1; i ++) {
-        alarmValue = alarms[i]
-        if (nextAlarm > alarmValue) {
+        if (nextAlarm > alarms[i]) {
+            alarmValue = alarms[i]
             nextAlarm -= alarmValue
             noAlarm = false
             break
@@ -105,7 +125,9 @@ function runMainTimeOut() {
             blocked = true
             killBoderedTabs()
         } else {
+            const message = alarmReachedMessage.replace(/{{}}/, alarmValue / (1000 * 60))
             runMainTimeOut()
+            showNotification(message)
         }
     }, nextAlarm)
 }
@@ -117,27 +139,24 @@ function onTabChanged(tab) {
     if (blocked) {
         if (app) {
             browser.tabs.remove(tab.id)
+            showNotification(timeReachedMessage)
         }
         return
     }
     if (app && currentTimeOutId) {
-        console.log("bodered para bodered")
+        lastapp = app
         return
     }
     if (!app && currentTimeOutId) {
-        console.log("bodered para unbodered")
         clearTimeout(currentTimeOutId)
         currentTimeOutId = null
-        console.log(lastapp)
-        remaningTime -= (Date.now() - lastTime) * lastapp.multiplier
+        remaningTime -= Date.now() - lastTime
         return 
     }
     if (!app) {
-        console.log("unbodered para unbodered")
         return
     }
 
-    console.log("unbodered para bodered")
     lastTime = Date.now()
     currentTimeOutId = 0
     runMainTimeOut()
@@ -160,22 +179,20 @@ async function onUpdated(tabId, changeInfo, tab) {
     const app = getAppByUrl(tab.url)
     if (blocked && app) {
         browser.tabs.remove(tabId)
+        showNotification(timeReachedMessage)
     }
 }
 
 function AddTime() {
-
+    showNotification(taskCompletedMessage)
+    remaningTime += timePerClick
+    if (!blocked) {
+        runMainTimeOut()
+    }
+    blocked = false
 }
 
-setInterval(() => {
-    if (!lastTime) { return }
-    if (currentTimeOutId) {
-        console.log(remaningTime - (Date.now() - lastTime))
-    } else {
-        console.log(remaningTime)
-    }
-    
-}, 100);
+console.log(alarms)
 
 browser.tabs.onUpdated.addListener(onUpdated)
 browser.tabs.onActivated.addListener(onActivated)
