@@ -38,16 +38,12 @@ const apps = [
 const appsRegex = []
 const appsUrls = []
 
-//const alarms = [
-//    1000 * 60 * 60,
-//    1000 * 60 * 30,
-//    1000 * 60 * 10,
-//    1000 * 60,
-//]
-const alarms = []
-for (let i = 60; i > 1; i--) {
-    alarms.push(1000 * 60 * i)
-}
+const alarms = [
+    1000 * 60 * 60,
+    1000 * 60 * 30,
+    1000 * 60 * 10,
+    1000 * 60,
+]
 
 var remaningTime = 0
 var currentTimeOutId = null
