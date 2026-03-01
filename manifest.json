@@ -6,10 +6,13 @@
   "description": "Boder you",
 
   "icons": {
-    "48": "icons/icon.png"
+    "64": "icons/icon.svg"
   },
 
-  "browser_action": {},
+  "browser_action": {
+    "default_popup": "timers/choose_time.html",
+    "default_icon": "icons/popup.png"
+  },
   "permissions": ["tabs", "activeTab", "storage", "notifications"],
   
   "background": {

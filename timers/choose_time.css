@@ -1,0 +1,37 @@
+html,
+body {
+  width: 150px;
+  background-color: #1b1b1b;
+}
+
+.hidden {
+  display: none;
+}
+
+button {
+  border: none;
+  width: 100%;
+  margin: 3% auto;
+  padding: 4px;
+  text-align: center;
+  font-size: 1em;
+  cursor: pointer;
+  background-color: #292929;
+  color: #eee;
+}
+
+button:hover {
+  background-color: #353535;
+}
+
+button:focus {
+    background-color: #474747;
+}
+
+button[type="reset"] {
+  background-color: #fbfbc9;
+}
+
+button[type="reset"]:hover {
+  background-color: #eaea9d;
+}

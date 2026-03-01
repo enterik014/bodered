@@ -2,7 +2,7 @@ console.log("bullshit")
 
 const timeReachedMessage = "Time reached, killing all bodered tabs, do some tasks to get more time"
 const alarmReachedMessage = "You have {{}} minutes left on bodered tabs."
-const taskCompletedMessage = "You finished a task, so now you have one extra hour"
+const taskCompletedMessage = "You finished a task, so now you have some extra time"
 
 const timePerClick = 1000 * 60 * 60
 const apps = [
@@ -33,6 +33,10 @@ const apps = [
     {
         "name": "spotify",
         "url": "*://open.spotify.com/*"
+    },
+    {
+        "name": "discord",
+        "url": "*://discord.com/*"
     }
 ]
 const appsRegex = []
@@ -159,6 +163,21 @@ function onTabChanged(tab) {
     lastapp = app
  }
 
+function addTime(time) {
+    remaningTime += time
+    if (!blocked) {
+        runMainTimeOut()
+    }
+    blocked = false
+    showNotification(taskCompletedMessage)
+}
+
+function resetTime() {
+    remaningTime = 0
+    blocked = true
+    killBoderedTabs()
+}
+
 async function onActivated(activeInfo) {
     let tab = await browser.tabs.get(activeInfo.tabId)
     onTabChanged(tab)
@@ -179,17 +198,14 @@ async function onUpdated(tabId, changeInfo, tab) {
     }
 }
 
-function AddTime() {
-    showNotification(taskCompletedMessage)
-    remaningTime += timePerClick
-    if (!blocked) {
-        runMainTimeOut()
+function handleMessage(message) {
+    if (message.action == "add") {
+        addTime(message.miliseconds)
+    } else {
+        resetTime()
     }
-    blocked = false
 }
-
-console.log(alarms)
 
 browser.tabs.onUpdated.addListener(onUpdated)
 browser.tabs.onActivated.addListener(onActivated)
-browser.browserAction.onClicked.addListener(AddTime)
+browser.runtime.onMessage.addListener(handleMessage)
